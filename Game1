@@ -1,0 +1,98 @@
+import streamlit as st
+import numpy as np
+from wordsearch import generate_wordsearch, find_words, highlight_words
+
+def main():
+    st.title("Word Search Puzzle")
+
+    # Input parameters
+    word_list = st.text_area("Enter words separated by commas (e.g., apple, banana, orange):").split(",")
+    word_list = [word.strip().upper() for word in word_list]
+    grid_size = st.slider("Select grid size:", min_value=5, max_value=15, value=10)
+    
+    # Generate word search grid
+    grid, word_locations = generate_wordsearch(grid_size, word_list)
+    
+    # Display grid
+    st.write("Word Search Puzzle:")
+    st.dataframe(grid)
+    
+    # Find words in the grid
+    found_words = find_words(grid, word_list)
+    
+    # Highlight found words in the grid
+    highlighted_grid = highlight_words(grid, word_locations)
+    st.write("Highlighted Word Search Puzzle:")
+    st.dataframe(highlighted_grid)
+    
+    # Display found words
+    st.write("Found Words:")
+    st.write(found_words)
+
+if __name__ == "__main__":
+    main()
+
+import numpy as np
+import random
+
+def generate_wordsearch(grid_size, words):
+    grid = np.random.choice(list('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), size=(grid_size, grid_size))
+
+    word_locations = {}
+    for word in words:
+        orientation = random.choice(['horizontal', 'vertical', 'diagonal'])
+        if orientation == 'horizontal':
+            start_row = random.randint(0, grid_size - 1)
+            start_col = random.randint(0, grid_size - len(word))
+            for i, letter in enumerate(word):
+                grid[start_row, start_col + i] = letter
+            word_locations[word] = [(start_row, start_col + i) for i in range(len(word))]
+        elif orientation == 'vertical':
+            start_row = random.randint(0, grid_size - len(word))
+            start_col = random.randint(0, grid_size - 1)
+            for i, letter in enumerate(word):
+                grid[start_row + i, start_col] = letter
+            word_locations[word] = [(start_row + i, start_col) for i in range(len(word))]
+        elif orientation == 'diagonal':
+            start_row = random.randint(0, grid_size - len(word))
+            start_col = random.randint(0, grid_size - len(word))
+            for i, letter in enumerate(word):
+                grid[start_row + i, start_col + i] = letter
+            word_locations[word] = [(start_row + i, start_col + i) for i in range(len(word))]
+
+    return grid, word_locations
+
+def find_words(grid, words):
+    found_words = []
+    for word in words:
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if grid[i][j] == word[0]:
+                    if check_word(grid, word, i, j):
+                        found_words.append(word)
+    return found_words
+
+def check_word(grid, word, row, col):
+    directions = [(1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)]
+    for d in directions:
+        found = True
+        for i in range(1, len(word)):
+            r = row + d[0]*i
+            c = col + d[1]*i
+            if 0 <= r < len(grid) and 0 <= c < len(grid[0]):
+                if grid[r][c] != word[i]:
+                    found = False
+                    break
+            else:
+                found = False
+                break
+        if found:
+            return True
+    return False
+
+def highlight_words(grid, word_locations):
+    highlighted_grid = np.array(grid, dtype=str)
+    for word, locations in word_locations.items():
+        for r, c in locations:
+            highlighted_grid[r, c] = f"<span style='color:red'>{grid[r, c]}</span>"
+    return highlighted_grid
